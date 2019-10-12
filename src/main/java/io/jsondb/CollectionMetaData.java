@@ -49,8 +49,7 @@ public class CollectionMetaData {
   private Class<?> clazz;
 
   private String idAnnotatedFieldName;
-  private Method idAnnotatedFieldGetterMethod;
-  private Method idAnnotatedFieldSetterMethod;
+  private Field idAnnotatedField;
 
   private final ReentrantReadWriteLock collectionLock;
 
@@ -101,6 +100,7 @@ public class CollectionMetaData {
           //We expect only one @Id annotated field and only one corresponding getter for it
           //This logic will capture the last @Id annotated field if there are more than one.
           this.idAnnotatedFieldName = fieldName;
+          this.idAnnotatedField = f;
         }
         if (a.annotationType().equals(Secret.class)) {
           this.secretAnnotatedFieldNames.add(fieldName);
@@ -119,8 +119,6 @@ public class CollectionMetaData {
         }
       }
     }
-    this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
-    this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);
   }
 
   protected ReentrantReadWriteLock getCollectionLock() {
@@ -158,12 +156,8 @@ public class CollectionMetaData {
     return idAnnotatedFieldName;
   }
 
-  public Method getIdAnnotatedFieldGetterMethod() {
-    return idAnnotatedFieldGetterMethod;
-  }
-
-  public Method getIdAnnotatedFieldSetterMethod() {
-    return idAnnotatedFieldSetterMethod;
+  public Field getIdAnnotatedField() {
+    return idAnnotatedField;
   }
 
   public List<String> getSecretAnnotatedFieldNames() {

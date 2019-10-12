@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -64,13 +65,13 @@ public class Util {
 
     RESTRICTED_CLASSES = Collections.unmodifiableCollection(restrictedClasses);
   }
-  
+
   protected static void ensureNotRestricted(Object o) {
     if (o.getClass().isArray() || RESTRICTED_CLASSES.contains(o.getClass().getName())) {
       throw new InvalidJsonDbApiUsageException("Collection object cannot be inserted, removed, updated or upserted as a single object");
     }
   }
-  
+
   protected static <T> String determineEntityCollectionName(T obj) {
     return determineCollectionName(obj.getClass());
   }
@@ -80,7 +81,7 @@ public class Util {
    * This method attempts to find a the annotation {@link io.jsondb.annotation.Document} on this class.
    * If found then we know the collection name else it throws a exception
    * @param entityClass  class that determines the name of the collection
-   * @return  name of the class 
+   * @return  name of the class
    */
   protected static String determineCollectionName(Class<?> entityClass) {
     if (entityClass == null) {
@@ -96,28 +97,25 @@ public class Util {
 
     return collectionName;
   }
-  
+
   /**
    * A utility method to extract the value of field marked by the @Id annotation using its
    * getter/accessor method.
    * @param document the actual Object representing the POJO we want the Id of.
-   * @param getterMethodForId the Method that is the accessor for the attributed with @Id annotation
+   * @param idField the attribute annotated with @Id
    * @return the actual Id or if none exists then a new random UUID
    */
-  protected static Object getIdForEntity(Object document, Method getterMethodForId) {
+  protected static Object getIdForEntity(Object document, Field idField) {
     Object id = null;
-    if (null != getterMethodForId) {
+    if (null != idField) {
       try {
-        id = getterMethodForId.invoke(document);
+        id = idField.get(document);
       } catch (IllegalAccessException e) {
         logger.error("Failed to invoke getter method for a idAnnotated field due to permissions", e);
         throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field due to permissions", e);
       } catch (IllegalArgumentException e) {
         logger.error("Failed to invoke getter method for a idAnnotated field due to wrong arguments", e);
         throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field due to wrong arguments", e);
-      } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke getter method for a idAnnotated field, the method threw a exception", e);
-        throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field, the method threw a exception", e);
       }
     }
     return id;
@@ -129,23 +127,20 @@ public class Util {
    * TODO: Some day we want to support policies for generation of ID like AutoIncrement etc.
    *
    * @param document the actual Object representing the POJO we want the Id to be set for.
-   * @param setterMethodForId the Method that is the mutator for the attributed with @Id annotation
+   * @param idField the attribute annotated with @Id
    * @return the Id that was generated and set
    */
-  protected static Object setIdForEntity(Object document, Method setterMethodForId) {
+  protected static Object setIdForEntity(Object document, Field idField) {
     Object id = UUID.randomUUID().toString();
-    if (null != setterMethodForId) {
+    if (null != idField) {
       try {
-        id = setterMethodForId.invoke(document, id);
+        idField.set(document, id);
       } catch (IllegalAccessException e) {
         logger.error("Failed to invoke setter method for a idAnnotated field due to permissions", e);
         throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field due to permissions", e);
       } catch (IllegalArgumentException e) {
         logger.error("Failed to invoke setter method for a idAnnotated field due to wrong arguments", e);
         throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field due to wrong arguments", e);
-      } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke setter method for a idAnnotated field, the method threw a exception", e);
-        throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field, the method threw a exception", e);
       }
     }
     return id;
@@ -191,7 +186,7 @@ public class Util {
    * Utility to stamp the version into a newly created .json File
    * This method is expected to be invoked on a newly created .json file before it is usable.
    * So no locking code required.
-   * 
+   *
    * @param dbConfig  all the settings used by Json DB
    * @param f  the target .json file on which to stamp the version
    * @param version  the actual version string to stamp

@@ -193,7 +193,6 @@ public class JsonDBTemplate implements JsonDBOperations {
   private <T> Map<Object, T> loadCollection(File collectionFile, String collectionName, CollectionMetaData cmd) {
     @SuppressWarnings("unchecked")
     Class<T> entity = cmd.getClazz();
-    Method getterMethodForId = cmd.getIdAnnotatedFieldGetterMethod();
 
     JsonReader jr = null;
     Map<Object, T> collection = new LinkedHashMap<Object, T>();
@@ -209,7 +208,7 @@ public class JsonDBTemplate implements JsonDBOperations {
           cmd.setActualSchemaVersion(v.getSchemaVersion());
         } else {
           T row = dbConfig.getObjectMapper().readValue(line, entity);
-          Object id = Util.getIdForEntity(row, getterMethodForId);
+          Object id = Util.getIdForEntity(row, cmd.getIdAnnotatedField());
           collection.put(id, row);
         }
         lineNo++;
@@ -735,12 +734,12 @@ public class JsonDBTemplate implements JsonDBOperations {
       if (null == collection) {
         throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
       }
-      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedFieldGetterMethod());
+      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedField());
       if(encrypted && cmd.hasSecret()){
         CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
       }
       if (null == id) {
-        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedField());
       } else if (collection.containsKey(id)) {
         throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
       }
@@ -795,12 +794,12 @@ public class JsonDBTemplate implements JsonDBOperations {
       Map<Object, T> newCollection = new LinkedHashMap<Object, T>();
       for (T o : batchToSave) {
         Object obj = Util.deepCopy(o);
-        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
+        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedField());
         if(encrypted && cmd.hasSecret()){
           CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
         }
         if (null == id) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedField());
         } else if (collection.containsKey(id)) {
           throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
         }
@@ -858,7 +857,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
 
       CollectionMetaData cmd = cmdMap.get(collectionName);
-      Object id = Util.getIdForEntity(objToSave, cmd.getIdAnnotatedFieldGetterMethod());
+      Object id = Util.getIdForEntity(objToSave, cmd.getIdAnnotatedField());
 
       T existingObject = collection.get(id);
       if (null == existingObject) {
@@ -919,7 +918,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
 
       CollectionMetaData cmd = cmdMap.get(collectionName);
-      Object id = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
+      Object id = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedField());
       if (!collection.containsKey(id)) {
         throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", id, collectionName));
       }
@@ -972,7 +971,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       Set<Object> removeIds = new HashSet<Object>();
 
       for (T o : batchToRemove) {
-        Object id = Util.getIdForEntity(o, cmd.getIdAnnotatedFieldGetterMethod());
+        Object id = Util.getIdForEntity(o, cmd.getIdAnnotatedField());
         if (collection.containsKey(id)) {
           removeIds.add(id);
         }
@@ -1036,14 +1035,14 @@ public class JsonDBTemplate implements JsonDBOperations {
         throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
       }
       CollectionMetaData cmd = cmdMap.get(collectionName);
-      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedFieldGetterMethod());
+      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedField());
       if(encrypted && cmd.hasSecret()){
         CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
       }
 
       boolean insert = true;
       if (null == id) {
-        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedField());
       } else if (collection.containsKey(id)) {
         insert = false;
       }
@@ -1108,13 +1107,13 @@ public class JsonDBTemplate implements JsonDBOperations {
 
       for (T o : batchToSave) {
         Object obj = Util.deepCopy(o);
-        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
+        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedField());
         if(encrypted && cmd.hasSecret()){
           CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
         }
         boolean insert = true;
         if (null == id) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedField());
         } else if (collection.containsKey(id)) {
           insert = false;
         }
@@ -1190,7 +1189,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         break; // Use only the first element we find.
       }
       if (null != objectToRemove) {
-        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
+        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedField());
         if (!collection.containsKey(idToRemove)) { //This will never happen since the object was located based of jxQuery
           throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", idToRemove, collectionName));
         }
@@ -1244,7 +1243,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       Set<Object> removeIds = new HashSet<Object>();
       while (resultItr.hasNext()) {
         T objectToRemove = resultItr.next();
-        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
+        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedField());
         removeIds.add(idToRemove);
       }
 
@@ -1322,7 +1321,7 @@ public class JsonDBTemplate implements JsonDBOperations {
           }
         }
 
-        Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
+        Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedField());
         JsonWriter jw = null;
         try {
           jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
@@ -1392,7 +1391,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             return null;
           }
         }
-        Object id = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
+        Object id = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedField());
         clonedModifiedObjects.put(id, clonedModifiedObject);
       }
 
