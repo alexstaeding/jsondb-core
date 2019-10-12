@@ -101,6 +101,7 @@ public class CollectionMetaData {
           //This logic will capture the last @Id annotated field if there are more than one.
           this.idAnnotatedFieldName = fieldName;
           this.idAnnotatedField = f;
+          this.idAnnotatedField.setAccessible(true);
         }
         if (a.annotationType().equals(Secret.class)) {
           this.secretAnnotatedFieldNames.add(fieldName);
